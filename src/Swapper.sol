@@ -5,7 +5,8 @@ import {IUniversalRouter} from "lib/universal-router/contracts/interfaces/IUnive
 import {IUniswapV3Factory} from "lib/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {Commands} from "lib/universal-router/contracts/libraries/Commands.sol";
 import {Constants} from "lib/universal-router/contracts/libraries/Constants.sol";
-import "lib/universal-router/permit2/src/Permit2.sol";
+import {Permit2} from 'lib/permit2/src/Permit2.sol';
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Swapper {
     error PoolDoesNotExist();
@@ -27,13 +28,13 @@ contract Swapper {
             revert AmountIsZero();
         }
 
+        ERC20(_tokenIn).transferFrom(msg.sender, address(this), _amountIn);
+
         address pool = uniswapV3Factory.getPool(_tokenIn, _tokenOut, 3000);
         if (pool == address(0)) {
             revert PoolDoesNotExist();
         }
 
-        // ERC20(token0()).approve(address(PERMIT2), type(uint256).max);
-        // ERC20(token1()).approve(address(PERMIT2), type(uint256).max);
         permit2.approve(_tokenIn, address(universalRouter), type(uint160).max, type(uint48).max);
         permit2.approve(_tokenOut, address(universalRouter), type(uint160).max, type(uint48).max);
 
@@ -42,7 +43,7 @@ contract Swapper {
         path[0] = _tokenIn;
         path[1] = _tokenOut;
         bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(Constants.MSG_SENDER, _amountIn, 0, path, true);
+        inputs[0] = abi.encode(msg.sender, _amountIn, _amountIn, path, false);
 
         universalRouter.execute(commands, inputs, block.timestamp + 1000);
     }

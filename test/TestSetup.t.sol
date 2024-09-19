@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {Test, console} from "forge-std/Test.sol";
 import {Swapper} from "../src/Swapper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "lib/universal-router/permit2/src/Permit2.sol";
+import {Permit2} from 'lib/permit2/src/Permit2.sol';
 
 import {IUniswapV3Factory} from "lib/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
@@ -14,7 +14,7 @@ contract TestSetup is Test {
     IUniswapV3Factory public uniswapV3Factory;
 
     Swapper public swapper;
-    Permit2 constant PERMIT2;
+    Permit2 public PERMIT2;
 
     address public universalRouter = 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD;
     address public uniswapV3FactoryAddress = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
@@ -30,10 +30,20 @@ contract TestSetup is Test {
     function setUp() public {
         vm.selectFork(vm.createFork(vm.envString("MAINNET_RPC_URL")));
 
+        deal(alice, 10 ether);
+
         PERMIT2 = Permit2(permit2Address);
 
         swapper = new Swapper(universalRouter, uniswapV3FactoryAddress, permit2Address);
         uniswapV3Factory = IUniswapV3Factory(uniswapV3FactoryAddress);
+
+        vm.startPrank(alice);
+        ERC20(weth9).approve(address(swapper), type(uint256).max);
+        ERC20(usdc).approve(address(swapper), type(uint256).max);
+        ERC20(weth9).approve(address(PERMIT2), type(uint256).max);
+        ERC20(usdc).approve(address(PERMIT2), type(uint256).max);
+        PERMIT2.approve(weth9, address(universalRouter), type(uint160).max, type(uint48).max);
+        PERMIT2.approve(usdc, address(universalRouter), type(uint160).max, type(uint48).max);
     }
 
     function test_Deploy() public {
@@ -51,8 +61,7 @@ contract TestSetup is Test {
         assertEq(ERC20(usdc).balanceOf(alice), 0);
 
         vm.startPrank(alice);
-        ERC20(weth9).approve(address(swapper), 1 ether);
-        // swapper.swap(weth9, usdc, 1 ether);
+        swapper.swap(weth9, usdc, 1 ether);
     }
 }
 
