@@ -10,3 +10,6 @@
 [submodule "lib/chainlink-local"]
 	path = lib/chainlink-local
 	url = https://github.com/smartcontractkit/chainlink-local
+[submodule "lib/universal-router"]
+	path = lib/universal-router
+	url = https://github.com/uniswap/universal-router
