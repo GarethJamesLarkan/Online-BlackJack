@@ -3,23 +3,56 @@ pragma solidity 0.8.22;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Swapper} from "../src/Swapper.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "lib/universal-router/permit2/src/Permit2.sol";
 
+import {IUniswapV3Factory} from "lib/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 contract TestSetup is Test {
-    uint256 public mainnetFork;
+    uint256 mainnetFork;
+
+    IUniswapV3Factory public uniswapV3Factory;
 
     Swapper public swapper;
+    Permit2 constant PERMIT2;
+
     address public universalRouter = 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD;
+    address public uniswapV3FactoryAddress = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+    address public permit2Address = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+
+    address public weth9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public uni = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
+
+    address public alice = makeAddr("alice");
+    address public bob = makeAddr("bob");
 
     function setUp() public {
-        string memory MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL);
+        vm.selectFork(vm.createFork(vm.envString("MAINNET_RPC_URL")));
 
-        swapper = new Swapper(universalRouter);
+        PERMIT2 = Permit2(permit2Address);
+
+        swapper = new Swapper(universalRouter, uniswapV3FactoryAddress, permit2Address);
+        uniswapV3Factory = IUniswapV3Factory(uniswapV3FactoryAddress);
     }
 
     function test_Deploy() public {
-        console.log("Swapper deployed at", address(swapper));
+        assertEq(address(swapper.universalRouter()), universalRouter);
+        assertEq(address(swapper.uniswapV3Factory()), address(uniswapV3Factory));
+    }
+
+    function test_Swap() public {
+        
+        assertEq(vm.activeFork(), mainnetFork);
+        
+        console.log(uniswapV3Factory.getPool(weth9, usdc, 3000));
+        deal(weth9, alice, 10 ether);
+        assertEq(ERC20(weth9).balanceOf(alice), 10 ether);
+        assertEq(ERC20(usdc).balanceOf(alice), 0);
+
+        vm.startPrank(alice);
+        ERC20(weth9).approve(address(swapper), 1 ether);
+        // swapper.swap(weth9, usdc, 1 ether);
     }
 }
 
