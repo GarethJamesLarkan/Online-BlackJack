@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
-import 'forge-std/Test.sol';
-import 'permit2/src/interfaces/IPermit2.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {IUniswapV2Factory} from '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
-import {IUniswapV2Pair} from '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import {Test} from "lib/forge-std/src/Test.sol";
+import {console} from "lib/forge-std/src/console.sol";
+import 'lib/permit2/src/interfaces/IPermit2.sol';
+import {ERC20} from 'lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
+import {IUniswapV2Factory} from 'lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
+import {IUniswapV2Pair} from 'lib/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import {IUniversalRouter} from "lib/universal-router/contracts/interfaces/IUniversalRouter.sol";
 import {Constants} from 'lib/universal-router/contracts/libraries/Constants.sol';
 import {Commands} from 'lib/universal-router/contracts/libraries/Commands.sol';
 
+import "lib/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+
 import {Swapper} from "../src/Swapper.sol";
 
-import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
-import '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
+import 'lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol';
+import 'lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol';
 
 contract UniswapV2Test is Test {
     uint256 constant AMOUNT = 1e6;
@@ -52,17 +55,31 @@ contract UniswapV2Test is Test {
 
     function test_ExactInput0For1() public {
 
+        ISwapRouter.ExactInputSingleParams memory params =
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: address(USDC),
+                tokenOut: address(WETH9),
+                fee: 3000,
+                recipient: msg.sender,
+                deadline: block.timestamp + 10000,
+                amountIn: AMOUNT,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+
         console.log(ERC20(address(USDC)).balanceOf(alice));
         console.log(ERC20(address(WETH9)).balanceOf(address(swapper)));
-        bytes memory commands = abi.encodePacked(bytes1(uint8(Commands.V2_SWAP_EXACT_IN)));
+        bytes memory commands = abi.encodePacked(bytes1(uint8(Commands.V3_SWAP_EXACT_IN)));
         address[] memory path = new address[](2);
         path[0] = address(USDC);
         path[1] = address(WETH9);
         bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(Constants.MSG_SENDER, AMOUNT, 0, path, true);
+        inputs[0] = abi.encode(params);
+        // inputs[0] = abi.encode(Constants.MSG_SENDER, AMOUNT, 0, path, true);
 
         vm.prank(alice);
-        swapper.swap(address(USDC), address(WETH9), AMOUNT);
+        router.execute(commands, inputs, block.timestamp + 10000);
+        // swapper.swap(address(USDC), address(WETH9), AMOUNT);
 
         console.log(ERC20(address(USDC)).balanceOf(alice));
         console.log(ERC20(address(WETH9)).balanceOf(address(swapper)));

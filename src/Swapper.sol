@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {IUniversalRouter} from "lib/universal-router/contracts/interfaces/IUniversalRouter.sol";
-import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import "lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import {Commands} from "lib/universal-router/contracts/libraries/Commands.sol";
 import {Constants} from "lib/universal-router/contracts/libraries/Constants.sol";
 import 'lib/permit2/src/interfaces/IPermit2.sol';
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract Swapper {
     error PoolDoesNotExist();
