@@ -2,14 +2,15 @@
 pragma solidity 0.8.22;
 
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract Swapper {
+import "./TokenTransfer.sol";
+
+contract Swapper is TokenTransfer {
     ISwapRouter public immutable swapRouter;
     address public immutable WETH9;
     uint24 public constant poolFee = 3000; // 0.3% fee
 
-    constructor(ISwapRouter _swapRouter, address _WETH9) {
+    constructor(ISwapRouter _swapRouter, address _WETH9, address _ccipRouter, address _link) TokenTransfer(_ccipRouter, _link) {
         swapRouter = _swapRouter;
         WETH9 = _WETH9;
     }
