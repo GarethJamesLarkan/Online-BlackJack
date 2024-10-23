@@ -8,7 +8,9 @@ import {Constants} from "lib/universal-router/contracts/libraries/Constants.sol"
 import 'lib/permit2/src/interfaces/IPermit2.sol';
 import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
-contract Swapper {
+import "./TokenTransfer.sol";
+
+contract Swapper is TokenTransfer {
     error PoolDoesNotExist();
     error AddressIsZero();
     error AmountIsZero();
@@ -17,7 +19,13 @@ contract Swapper {
     IUniswapV2Factory public immutable uniswapV2Factory;
     IPermit2 public permit2;
 
-    constructor(address _universalRouter, address _uniswapV2Factory, address _permit2) {
+    constructor(
+        address _universalRouter, 
+        address _ccipRouter, 
+        address _link, 
+        address _uniswapV2Factory, 
+        address _permit2
+    ) TokenTransfer(_ccipRouter, _link) {
         universalRouter = IUniversalRouter(_universalRouter);
         uniswapV2Factory = IUniswapV2Factory(_uniswapV2Factory);
         permit2 = IPermit2(_permit2);
