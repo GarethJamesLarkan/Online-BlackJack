@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./MockERC20.sol";
 
 contract TokenSwapTest is Test {
-    TokenSwap public tokenSwap;
+    Swapper public tokenSwap;
     ISwapRouter public swapRouter;
     address public WETH9;
     address public tokenAddress;
@@ -29,7 +29,7 @@ contract TokenSwapTest is Test {
         deal(address(mockERC20), user, 1000 ether); // Assign tokens to the user for testing
         
         // Deploy the swap contract
-        tokenSwap = new TokenSwap(swapRouter, WETH9, address(mockERC20));
+        tokenSwap = new Swapper(swapRouter, WETH9, address(mockERC20));
 
         
     }
@@ -57,7 +57,7 @@ contract TokenSwapTest is Test {
 
         // Log results
         console.log("Amount out:", amountOut);
-        console.log("Final user balance:", mockERC20.balanceOf(user));
+        console.log("Final user balance:", mockERC20.balanceOf(address(tokenSwap)));
         console.log("Final tokenSwap balance:", mockERC20.balanceOf(address(tokenSwap)));
 
         // Assertions to validate results

@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract TokenSwap {
+contract Swapper {
     ISwapRouter public immutable swapRouter;
     address public immutable WETH9;
     address public tokenAddress;
@@ -29,7 +29,7 @@ contract TokenSwap {
                 tokenIn: tokenAddress,
                 tokenOut: WETH9,
                 fee: poolFee,
-                recipient: msg.sender,
+                recipient: address(this),
                 deadline: block.timestamp + 15,
                 amountIn: tokenAmountIn,
                 amountOutMinimum: 0,
