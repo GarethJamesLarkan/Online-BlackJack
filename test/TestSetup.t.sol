@@ -29,7 +29,7 @@ contract TokenSwapTest is Test {
         deal(address(mockERC20), user, 1000 ether); // Assign tokens to the user for testing
         
         // Deploy the swap contract
-        tokenSwap = new Swapper(swapRouter, WETH9, address(mockERC20));
+        tokenSwap = new Swapper(swapRouter, WETH9);
 
         
     }
@@ -53,7 +53,7 @@ contract TokenSwapTest is Test {
         console.log("Initial tokenSwap balance:", mockERC20.balanceOf(address(tokenSwap)));
 
         // Perform the swap
-        uint256 amountOut = tokenSwap.swapExactInputSingle(100 ether);
+        uint256 amountOut = tokenSwap.swapExactInputSingle(address(mockERC20), 100 ether);
 
         // Log results
         console.log("Amount out:", amountOut);

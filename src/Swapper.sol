@@ -7,31 +7,29 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract Swapper {
     ISwapRouter public immutable swapRouter;
     address public immutable WETH9;
-    address public tokenAddress;
     uint24 public constant poolFee = 3000; // 0.3% fee
 
-    constructor(ISwapRouter _swapRouter, address _WETH9, address _tokenAddress) {
+    constructor(ISwapRouter _swapRouter, address _WETH9) {
         swapRouter = _swapRouter;
         WETH9 = _WETH9;
-        tokenAddress = _tokenAddress;
     }
 
-    function swapExactInputSingle(uint256 tokenAmountIn) external returns (uint256 amountOut) {
+    function swapExactInputSingle(address _tokenAddress, uint256 _tokenAmountIn) external returns (uint256 amountOut) {
         // Transfer tokens from user to this contract
-        IERC20(tokenAddress).transferFrom(msg.sender, address(this), tokenAmountIn);
+        IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmountIn);
 
         // Approve the Uniswap router to spend tokens
-        IERC20(tokenAddress).approve(address(swapRouter), tokenAmountIn);
+        IERC20(_tokenAddress).approve(address(swapRouter), _tokenAmountIn);
 
         // Setup swap parameters
         ISwapRouter.ExactInputSingleParams memory params =
             ISwapRouter.ExactInputSingleParams({
-                tokenIn: tokenAddress,
+                tokenIn: _tokenAddress,
                 tokenOut: WETH9,
                 fee: poolFee,
                 recipient: address(this),
                 deadline: block.timestamp + 15,
-                amountIn: tokenAmountIn,
+                amountIn: _tokenAmountIn,
                 amountOutMinimum: 0,
                 sqrtPriceLimitX96: 0
             });
