@@ -28,3 +28,6 @@
 [submodule "lib/chainlink-brownie-contracts"]
 	path = lib/chainlink-brownie-contracts
 	url = https://github.com/smartcontractkit/chainlink-brownie-contracts
+[submodule "lib/universal-router"]
+	path = lib/universal-router
+	url = https://github.com/uniswap/universal-router
