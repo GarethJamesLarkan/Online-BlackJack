@@ -3,3 +3,5 @@
 @uniswap/v2-periphery/=lib/v2-periphery/
 @uniswap/v3-core/=lib/v3-core/
 @uniswap/v3-periphery/=lib/v3-periphery/
+@chainlink/contracts-ccip/src/v0.8/=lib/chainlink-brownie-contracts/contracts/src/v0.8/
+@chainlink/local/=lib/chainlink-local/

@@ -1,203 +1,69 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity 0.8.22;
 
-import {Test} from "lib/forge-std/src/Test.sol";
-import {console} from "lib/forge-std/src/console.sol";
-import 'lib/permit2/src/interfaces/IPermit2.sol';
-import {ERC20} from 'lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
-import {IUniswapV2Factory} from 'lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
-import {IUniswapV2Pair} from 'lib/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
-import {IUniversalRouter} from "lib/universal-router/contracts/interfaces/IUniversalRouter.sol";
-import {Constants} from 'lib/universal-router/contracts/libraries/Constants.sol';
-import {Commands} from 'lib/universal-router/contracts/libraries/Commands.sol';
+import "forge-std/Test.sol";
+import "../src/Swapper.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./MockERC20.sol";
 
-import {Swapper} from "../src/Swapper.sol";
+contract TokenSwapTest is Test {
+    TokenSwap public tokenSwap;
+    ISwapRouter public swapRouter;
+    address public WETH9;
+    address public tokenAddress;
+    MockERC20 public mockERC20;
 
-import 'lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol';
-import 'lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol';
+    // Mock tokens for testing
+    ERC20 public mockToken;
+    address public user = address(0x1);
 
-contract UniswapV2Test is Test {
+    function setUp() public {
+        // Setup the addresses
+        swapRouter = ISwapRouter(address(0x123)); // Mock router address
+        WETH9 = address(0x456);                  // Mock WETH9 address
+        // tokenAddress = address(0x789);            // Mock token address
 
-    // CCIPLocalSimulatorFork public ccipLocalSimulatorFork;
-    // uint256 public sourceFork;
-    // uint256 public destinationFork;
-    // address public alice;
-    // address public bob;
-    // IRouterClient public sourceRouter;
-    // uint64 public destinationChainSelector;
-    // BurnMintERC677Helper public sourceCCIPBnMToken;
-    // BurnMintERC677Helper public destinationCCIPBnMToken;
-    // IERC20 public sourceLinkToken;
+        // Deploy mock ERC20 token for testing
+        mockERC20 = new MockERC20("Mock Token", "MTK");
+        deal(address(mockERC20), user, 1000 ether); // Assign tokens to the user for testing
+        
+        // Deploy the swap contract
+        tokenSwap = new TokenSwap(swapRouter, WETH9, address(mockERC20));
 
-    uint256 constant AMOUNT = 1e6;
-    uint256 constant BALANCE = 100000 ether;
-    IUniswapV2Factory constant FACTORY = IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
-    ERC20 constant WETH9 = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    ERC20 constant USDC = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    IPermit2 constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+        
+    }
 
-    IUniversalRouter router = IUniversalRouter(0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD);
+    function testSwapExactInputSingle() public {
+        // Mock the swapRouter call
+        vm.mockCall(
+            address(swapRouter),
+            abi.encodeWithSelector(ISwapRouter.exactInputSingle.selector),
+            abi.encode(1 ether) // Return 1 WETH for the swap
+        );
 
-    Swapper public swapper;
+        // Set the user as the sender
+        vm.startPrank(user);
 
-    address alice = vm.addr(1001);
+        // Approve the swap contract to spend user's tokens
+        mockERC20.approve(address(tokenSwap), 100 ether);
 
-    function setUp() public virtual {
-        vm.createSelectFork(vm.envString('MAINNET_RPC_URL'));
+        // Log initial balances
+        console.log("Initial user balance:", mockERC20.balanceOf(user));
+        console.log("Initial tokenSwap balance:", mockERC20.balanceOf(address(tokenSwap)));
 
-        swapper = new Swapper(address(router), address(FACTORY), address(PERMIT2));
+        // Perform the swap
+        uint256 amountOut = tokenSwap.swapExactInputSingle(100 ether);
 
-        vm.startPrank(alice);
-        deal(alice, BALANCE);
-        deal(address(USDC), alice, BALANCE);
-        deal(address(WETH9), alice, BALANCE);
+        // Log results
+        console.log("Amount out:", amountOut);
+        console.log("Final user balance:", mockERC20.balanceOf(user));
+        console.log("Final tokenSwap balance:", mockERC20.balanceOf(address(tokenSwap)));
 
-        ERC20(USDC).approve(address(swapper), type(uint256).max);
-        ERC20(WETH9).approve(address(swapper), type(uint256).max);
-        ERC20(USDC).approve(address(PERMIT2), type(uint256).max);
-        ERC20(WETH9).approve(address(PERMIT2), type(uint256).max);
-        PERMIT2.approve(address(USDC), address(router), type(uint160).max, type(uint48).max);
-        PERMIT2.approve(address(WETH9), address(router), type(uint160).max, type(uint48).max);
+        // Assertions to validate results
+        assertGt(amountOut, 0, "Amount out should be greater than zero");
+        assertEq(mockERC20.balanceOf(user), 900 ether, "User's token balance should decrease by 100 MTK");
 
-        ERC20(USDC).approve(address(PERMIT2), type(uint160).max);
         vm.stopPrank();
     }
-
-    function test_ExactInput0For1() public {
-
-        // console.log(ERC20(address(USDC)).balanceOf(alice));
-        // console.log(ERC20(address(WETH9)).balanceOf(address(swapper)));
-        // bytes memory commands = abi.encodePacked(bytes1(uint8(Commands.V3_SWAP_EXACT_IN)));
-        // address[] memory path = new address[](2);
-        // path[0] = address(USDC);
-        // path[1] = address(WETH9);
-        // bytes[] memory inputs = new bytes[](1);
-        // // inputs[0] = abi.encode(params);
-        // inputs[0] = abi.encode(Constants.MSG_SENDER, AMOUNT, 0, path, true);
-
-        vm.prank(alice);
-        swapper.swap(address(USDC), address(WETH9), AMOUNT);
-
-        console.log(ERC20(address(USDC)).balanceOf(alice));
-        console.log(ERC20(address(WETH9)).balanceOf(address(swapper)));
-    }
 }
-
-
-
-
-
-// contract ForkTestSetup is Test {
-    // CCIPLocalSimulatorFork public ccipLocalSimulatorFork;
-    // uint256 public sourceFork;
-    // uint256 public destinationFork;
-    // address public alice;
-    // address public bob;
-    // IRouterClient public sourceRouter;
-    // uint64 public destinationChainSelector;
-    // BurnMintERC677Helper public sourceCCIPBnMToken;
-    // BurnMintERC677Helper public destinationCCIPBnMToken;
-    // IERC20 public sourceLinkToken;
-
-    // TokenTransfer public tokenTransfer;
-
-    // function setUp() public {
-    //     string memory DESTINATION_RPC_URL = vm.envString(
-    //         "OPTIMISM_SEPOLIA_RPC_URL"
-    //     );
-    //     string memory SOURCE_RPC_URL = vm.envString("MAINNET_SEPOLIA_RPC_URL");
-    //     destinationFork = vm.createSelectFork(DESTINATION_RPC_URL);
-    //     sourceFork = vm.createFork(SOURCE_RPC_URL);
-
-    //     bob = makeAddr("bob");
-    //     alice = makeAddr("alice");
-
-    //     ccipLocalSimulatorFork = new CCIPLocalSimulatorFork();
-    //     vm.makePersistent(address(ccipLocalSimulatorFork));
-
-    //     Register.NetworkDetails
-    //         memory destinationNetworkDetails = ccipLocalSimulatorFork
-    //             .getNetworkDetails(block.chainid);
-    //     destinationCCIPBnMToken = BurnMintERC677Helper(
-    //         destinationNetworkDetails.ccipBnMAddress
-    //     );
-    //     destinationChainSelector = destinationNetworkDetails.chainSelector;
-
-    //     vm.selectFork(sourceFork);
-    //     Register.NetworkDetails
-    //         memory sourceNetworkDetails = ccipLocalSimulatorFork
-    //             .getNetworkDetails(block.chainid);
-    //     sourceCCIPBnMToken = BurnMintERC677Helper(
-    //         sourceNetworkDetails.ccipBnMAddress
-    //     );
-    //     sourceLinkToken = IERC20(sourceNetworkDetails.linkAddress);
-    //     sourceRouter = IRouterClient(sourceNetworkDetails.routerAddress);
-
-    //     tokenTransfer = new TokenTransfer(sourceNetworkDetails.routerAddress, sourceNetworkDetails.linkAddress);
-    // }
-
-    // function prepareScenario()
-    //     public
-    //     returns (
-    //         Client.EVMTokenAmount[] memory tokensToSendDetails,
-    //         uint256 amountToSend
-    //     )
-    // {
-    //     vm.selectFork(sourceFork);
-    //     vm.startPrank(alice);
-    //     sourceCCIPBnMToken.drip(alice);
-
-    //     amountToSend = 100;
-    //     sourceCCIPBnMToken.approve(address(sourceRouter), amountToSend);
-
-    //     tokensToSendDetails = new Client.EVMTokenAmount[](1);
-    //     tokensToSendDetails[0] = Client.EVMTokenAmount({
-    //         token: address(sourceCCIPBnMToken),
-    //         amount: amountToSend
-    //     });
-
-    //     vm.stopPrank();
-    // }
-
-    // function test_transferTokensFromEoaToEoaPayFeesInLink() external {
-    //     (
-    //         Client.EVMTokenAmount[] memory tokensToSendDetails,
-    //         uint256 amountToSend
-    //     ) = prepareScenario();
-    //     vm.selectFork(destinationFork);
-    //     uint256 balanceOfBobBefore = destinationCCIPBnMToken.balanceOf(bob);
-
-    //     vm.selectFork(sourceFork);
-    //     uint256 balanceOfAliceBefore = sourceCCIPBnMToken.balanceOf(alice);
-    //     ccipLocalSimulatorFork.requestLinkFromFaucet(alice, 10 ether);
-
-    //     vm.startPrank(alice);
-    //     Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-    //         receiver: abi.encode(bob),
-    //         data: abi.encode(""),
-    //         tokenAmounts: tokensToSendDetails,
-    //         extraArgs: Client._argsToBytes(
-    //             Client.EVMExtraArgsV1({gasLimit: 0})
-    //         ),
-    //         feeToken: address(sourceLinkToken)
-    //     });
-
-    //     uint256 fees = sourceRouter.getFee(destinationChainSelector, message);
-    //     sourceLinkToken.approve(address(sourceRouter), fees);
-    //     sourceRouter.ccipSend(destinationChainSelector, message);
-    //     vm.stopPrank();
-
-    //     uint256 balanceOfAliceAfter = sourceCCIPBnMToken.balanceOf(alice);
-    //     assertEq(balanceOfAliceAfter, balanceOfAliceBefore - amountToSend);
-
-    //     ccipLocalSimulatorFork.switchChainAndRouteMessage(destinationFork);
-    //     uint256 balanceOfBobAfter = destinationCCIPBnMToken.balanceOf(bob);
-    //     assertEq(balanceOfBobAfter, balanceOfBobBefore + amountToSend);
-    // }
-
-    // function test_Fork() public {
-    //     console.log("sourceFork", sourceFork);
-    //     console.log("destinationFork", destinationFork);
-    // }
-    
-// }
