@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract PorscheSale {
 
     struct Porsche {
@@ -17,11 +19,14 @@ contract PorscheSale {
     mapping(uint256 porscheId => Porsche porsche) public porsches;
 
     uint256 public porscheId;
+    address public wethAddress;
 
     event PorscheAdded(uint256 id);
     event PorschePurchased(uint256 id);
 
-    constructor() {
+    constructor(address weth) {
+        require(weth != address(0), "Invalid WETH address");
+        wethAddress = weth;
     }
 
     function addPorsche(Porsche memory _porsche) public {
@@ -46,7 +51,11 @@ contract PorscheSale {
     }
 
     // TASK FOR CODE OFF
-    // Add a function to allow someone to purchase a Porsche with WETH
+    // ADD FUNCTION TO ALLOW PURCHASES IN WETH
+    // TEST FUNCTION IN test/PorscheSale/PurchasePorscheInWETH.t.sol
+    function purchasePorscheInWETH(uint256 _porscheId) public {
+        
+    }
 
     function _checkValidPorsche(uint256 _porscheId) private view {
         require(_porscheId < porscheId, "Invalid Porsche ID");

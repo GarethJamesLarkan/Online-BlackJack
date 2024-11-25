@@ -30,7 +30,7 @@ contract PurchasePorscheInEth is TestSetup {
         porscheSale.purchasePorscheInETH{value: 29 ether}(0);
     }
 
-    function test_SuccessfulPurchase() public {
+    function test_SuccessfulPurchaseInETH() public {
         uint256 bobBalanceBefore = bob.balance;
         uint256 aliceBalanceBefore = alice.balance;
 
