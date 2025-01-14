@@ -22,7 +22,6 @@ contract BlackJack is Ownable {
 
     // ---------- Internal Game Helper Functions -------------
     function _dealInitialCards() internal {
-
     }
 
 
